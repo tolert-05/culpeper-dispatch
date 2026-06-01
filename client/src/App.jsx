@@ -708,23 +708,23 @@ export default function App() {
       {showScanner && (
         <div className="scanner-bar">
           <div className="scanner-bar-head">
-            <span className="scanner-label">▶ CULPEPER CO. FIRE/EMS — LIVE SCANNER</span>
+            <span className="scanner-label">CULPEPER CO. FIRE/EMS — LIVE SCANNER</span>
+            <button className="close-btn" onClick={() => setShowScanner(false)}>✕</button>
+          </div>
+          <div className="scanner-body">
+            <div className="scanner-info">
+              <span className="scanner-feed">Feed #26919 · Broadcastify</span>
+              <span className="scanner-sub">Culpeper County Fire &amp; EMS Dispatch</span>
+            </div>
             <a
-              className="scanner-ext"
+              className="scanner-play-btn"
               href="https://www.broadcastify.com/listen/feed/26919"
               target="_blank"
               rel="noreferrer"
-            >open broadcastify ↗</a>
-            <button className="close-btn" onClick={() => setShowScanner(false)}>✕</button>
+            >
+              ▶ OPEN LIVE SCANNER
+            </a>
           </div>
-          <iframe
-            title="Culpeper scanner"
-            src="https://www.broadcastify.com/embed/player/?feedId=26919"
-            className="scanner-frame"
-            allow="autoplay"
-            scrolling="no"
-            frameBorder="0"
-          />
         </div>
       )}
 
