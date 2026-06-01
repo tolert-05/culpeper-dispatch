@@ -399,7 +399,7 @@ if (fs.existsSync(clientDist)) {
 }
 
 // ── Start ────────────────────────────────────────────────────────
-const PORT = 3003;
+const PORT = process.env.PORT || 3003;
 app.listen(PORT, async () => {
   console.log(`✅ Culpeper Dispatch server on http://localhost:${PORT}`);
   await poll();
