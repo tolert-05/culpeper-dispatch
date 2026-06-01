@@ -39,6 +39,8 @@ let lastSync       = null;
 let syncStatus     = 'starting';
 let currentData    = { active: [], pending: [], raw: null };
 let rawSample      = null; // first response for debugging
+let authFailCount  = 0;
+let nextAuthTime   = 0;
 
 // ── SSE state ───────────────────────────────────────────────────
 const sseClients = new Set();
@@ -292,8 +294,19 @@ function processResponse(data) {
 // ── Poll IAR API ────────────────────────────────────────────────
 async function poll() {
   if (!sessionCookies) {
-    try { await authenticate(); return; } catch (e) {
-      console.error('Auth error:', e.message);
+    if (Date.now() < nextAuthTime) {
+      console.log(`⏳ Auth backoff — retrying in ${Math.round((nextAuthTime - Date.now()) / 1000)}s`);
+      return;
+    }
+    try {
+      await authenticate();
+      authFailCount = 0;
+      return;
+    } catch (e) {
+      authFailCount++;
+      const backoffMs = Math.min(5 * 60 * 1000, authFailCount * 60 * 1000); // 1min, 2min, ... max 5min
+      nextAuthTime = Date.now() + backoffMs;
+      console.error(`Auth error (attempt ${authFailCount}): ${e.message} — next retry in ${backoffMs/1000}s`);
       syncStatus = 'auth_error';
       return;
     }
