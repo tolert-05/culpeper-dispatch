@@ -607,10 +607,22 @@ body { background: var(--bg); }
 .scanner-bar-head {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 6px 14px;
+  gap: 10px;
+  padding: 5px 14px;
   background: #0d0d1f;
   border-bottom: 1px solid #1e2a4a;
+}
+
+.scanner-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--dim);
+  flex-shrink: 0;
+}
+.scanner-dot.scanner-live {
+  background: #4ade80;
+  box-shadow: 0 0 6px #4ade80;
+  animation: blink 1.5s infinite;
 }
 
 .scanner-label {
@@ -621,35 +633,22 @@ body { background: var(--bg); }
   flex: 1;
 }
 
+.scanner-ext {
+  font-size: 9px;
+  color: var(--dim);
+  text-decoration: none;
+  letter-spacing: 0.04em;
+}
+.scanner-ext:hover { color: var(--blue); }
+
 .scanner-body {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 10px 14px;
-  gap: 12px;
-}
-
-.scanner-info {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.scanner-feed {
-  font-size: 10px;
-  color: var(--dim);
-  letter-spacing: 0.06em;
-}
-
-.scanner-sub {
-  font-size: 12px;
-  color: var(--text);
-  font-weight: 600;
+  padding: 8px 14px;
+  gap: 14px;
 }
 
 .scanner-play-btn {
-  display: inline-block;
-  padding: 8px 18px;
   background: #0e1f3a;
   border: 1px solid #2756a8;
   color: #7db9ff;
@@ -657,13 +656,49 @@ body { background: var(--bg); }
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.1em;
-  text-decoration: none;
-  white-space: nowrap;
+  padding: 6px 16px;
   cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
-.scanner-play-btn:hover {
-  background: #152d54;
-  color: #93c5fd;
+.scanner-play-btn:hover { background: #152d54; color: #93c5fd; }
+.scanner-play-btn.scanner-playing {
+  border-color: #4ade80;
+  color: #4ade80;
+  background: #0a1f0d;
+}
+
+.scanner-vol {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: 1;
+}
+.scanner-vol-label {
+  font-size: 9px;
+  color: var(--dim);
+  letter-spacing: 0.08em;
+  flex-shrink: 0;
+}
+.scanner-vol-slider {
+  flex: 1;
+  accent-color: #4d9ef7;
+  cursor: pointer;
+  max-width: 160px;
+}
+
+.scanner-live-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: #4ade80;
+  letter-spacing: 0.08em;
+  flex-shrink: 0;
+}
+
+.scanner-error {
+  font-size: 10px;
+  color: var(--red);
+  letter-spacing: 0.04em;
 }
 
 /* ── Mobile ───────────────────────────────────────────── */

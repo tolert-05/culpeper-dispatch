@@ -532,6 +532,58 @@ function Section({ label, incidents, selected, onSelect }) {
   );
 }
 
+// ── Scanner ───────────────────────────────────────────────────────
+
+const STREAM_URL = 'https://broadcastify.cdnstream1.com/26919';
+
+function ScannerBar({ onClose }) {
+  const audioRef = useRef(null);
+  const [playing, setPlaying] = useState(false);
+  const [volume,  setVolume]  = useState(0.8);
+  const [error,   setError]   = useState(null);
+
+  function toggle() {
+    const a = audioRef.current;
+    if (!a) return;
+    if (playing) {
+      a.pause();
+      setPlaying(false);
+    } else {
+      setError(null);
+      a.play().then(() => setPlaying(true)).catch(e => setError(e.message));
+    }
+  }
+
+  function onVol(e) {
+    const v = parseFloat(e.target.value);
+    setVolume(v);
+    if (audioRef.current) audioRef.current.volume = v;
+  }
+
+  return (
+    <div className="scanner-bar">
+      <audio ref={audioRef} src={STREAM_URL} preload="none" onError={() => setError('Stream unavailable')} />
+      <div className="scanner-bar-head">
+        <span className={`scanner-dot ${playing ? 'scanner-live' : ''}`} />
+        <span className="scanner-label">CULPEPER CO. FIRE/EMS SCANNER</span>
+        <a className="scanner-ext" href="https://www.broadcastify.com/listen/feed/26919" target="_blank" rel="noreferrer">broadcastify ↗</a>
+        <button className="close-btn" onClick={() => { audioRef.current?.pause(); onClose(); }}>✕</button>
+      </div>
+      <div className="scanner-body">
+        <button className={`scanner-play-btn ${playing ? 'scanner-playing' : ''}`} onClick={toggle}>
+          {playing ? '⏹ STOP' : '▶ PLAY'}
+        </button>
+        <div className="scanner-vol">
+          <span className="scanner-vol-label">VOL</span>
+          <input type="range" min="0" max="1" step="0.05" value={volume} onChange={onVol} className="scanner-vol-slider" />
+        </div>
+        {error && <span className="scanner-error">{error}</span>}
+        {playing && <span className="scanner-live-label">● LIVE</span>}
+      </div>
+    </div>
+  );
+}
+
 // ── App ───────────────────────────────────────────────────────────
 
 export default function App() {
@@ -706,26 +758,7 @@ export default function App() {
       </div>
 
       {showScanner && (
-        <div className="scanner-bar">
-          <div className="scanner-bar-head">
-            <span className="scanner-label">CULPEPER CO. FIRE/EMS — LIVE SCANNER</span>
-            <button className="close-btn" onClick={() => setShowScanner(false)}>✕</button>
-          </div>
-          <div className="scanner-body">
-            <div className="scanner-info">
-              <span className="scanner-feed">Feed #26919 · Broadcastify</span>
-              <span className="scanner-sub">Culpeper County Fire &amp; EMS Dispatch</span>
-            </div>
-            <a
-              className="scanner-play-btn"
-              href="https://www.broadcastify.com/listen/feed/26919"
-              target="_blank"
-              rel="noreferrer"
-            >
-              ▶ OPEN LIVE SCANNER
-            </a>
-          </div>
-        </div>
+        <ScannerBar onClose={() => setShowScanner(false)} />
       )}
 
       {showAlerts && (
