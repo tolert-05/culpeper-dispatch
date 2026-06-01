@@ -592,6 +592,51 @@ body { background: var(--bg); }
   padding-bottom: env(safe-area-inset-bottom);
 }
 
+/* ── Scanner bar ──────────────────────────────────────── */
+.scanner-bar {
+  position: fixed;
+  bottom: 24px; /* above footer */
+  left: 0; right: 0;
+  z-index: 400;
+  background: #0a0a14;
+  border-top: 1px solid #2756a8;
+  display: flex;
+  flex-direction: column;
+}
+
+.scanner-bar-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 5px 14px;
+  background: #0d0d1f;
+  border-bottom: 1px solid #1e2a4a;
+}
+
+.scanner-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: #7db9ff;
+  flex: 1;
+}
+
+.scanner-ext {
+  font-size: 9px;
+  color: var(--dim);
+  text-decoration: none;
+  letter-spacing: 0.04em;
+}
+.scanner-ext:hover { color: var(--blue); }
+
+.scanner-frame {
+  width: 100%;
+  height: 56px;
+  border: none;
+  display: block;
+  background: transparent;
+}
+
 /* ── Mobile ───────────────────────────────────────────── */
 @media (max-width: 768px) {
   :root { font-size: 14px; }
@@ -705,4 +750,10 @@ body { background: var(--bg); }
   .section-label { font-size: 10px; }
   .section-count { font-size: 10px; }
   .empty { font-size: 12px; padding: 16px; }
+
+  .scanner-bar {
+    bottom: 0;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .scanner-label { font-size: 11px; }
 }

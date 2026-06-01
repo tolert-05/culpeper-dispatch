@@ -59,6 +59,71 @@ function broadcastNewIncidents(incidents) {
 const TG_TOKEN   = process.env.TELEGRAM_TOKEN;
 const TG_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 
+// ── Pushover alerts ──────────────────────────────────────────────
+const PO_TOKEN = process.env.PUSHOVER_APP_TOKEN;
+const PO_USER  = process.env.PUSHOVER_USER_KEY;
+
+function pushoverPriority(type = '') {
+  const t = type.toUpperCase();
+  if (/FIRE|SMOKE|BURN|BRUSH/.test(t))                   return 2; // emergency — repeats until ack
+  if (/EMS|MEDICAL|CARDIAC|CHEST|BREATH|STROKE/.test(t)) return 1; // high — bypasses quiet hours
+  if (/ACCIDENT|MVA|CRASH|COLLISION/.test(t))             return 1;
+  if (/RESCUE|EXTRICATION|WATER|CONFINED/.test(t))        return 1;
+  return 0;
+}
+
+function pushoverSound(type = '') {
+  const t = type.toUpperCase();
+  if (/FIRE|SMOKE|BURN|BRUSH/.test(t))                   return 'siren';
+  if (/EMS|MEDICAL|CARDIAC|CHEST|BREATH|STROKE/.test(t)) return 'bike';
+  if (/ACCIDENT|MVA|CRASH|COLLISION/.test(t))             return 'mechanical';
+  if (/RESCUE|EXTRICATION|WATER|CONFINED/.test(t))        return 'spacealarm';
+  return 'pushover';
+}
+
+function sendPushover(incident) {
+  if (!PO_TOKEN || !PO_USER) return;
+
+  const type     = incident.type    || 'UNKNOWN CALL';
+  const subtype  = incident.subtype ? ` · ${incident.subtype}` : '';
+  const address  = incident.address || 'No address';
+  const loc      = incident.locationName ? `${incident.locationName} — ` : '';
+  const cross    = incident.crossStreet  ? `\nCross: ${incident.crossStreet}` : '';
+  const munic    = incident.municipality ? `\n${incident.municipality}` : '';
+  const pri      = incident.priority     ? ` [P${incident.priority}]` : '';
+  const mapLink  = incident.lat ? `https://maps.google.com/?q=${incident.lat},${incident.lng}` : null;
+
+  const priority = pushoverPriority(type);
+
+  const payload = {
+    token:   PO_TOKEN,
+    user:    PO_USER,
+    title:   `🚨 ${type}${subtype}${pri}`,
+    message: `${loc}${address}${munic}${cross}`,
+    sound:   pushoverSound(type),
+    priority,
+    ...(priority === 2 ? { retry: 30, expire: 1800 } : {}),
+    ...(mapLink ? { url: mapLink, url_title: 'Open in Maps' } : {}),
+  };
+
+  const body = JSON.stringify(payload);
+  const req = https.request({
+    hostname: 'api.pushover.net',
+    path:     '/1/messages.json',
+    method:   'POST',
+    headers:  { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+  }, res => {
+    if (res.statusCode !== 200) {
+      let d = '';
+      res.on('data', c => d += c);
+      res.on('end', () => console.error('Pushover error:', res.statusCode, d));
+    }
+  });
+  req.on('error', e => console.error('Pushover request error:', e.message));
+  req.write(body);
+  req.end();
+}
+
 function sendTelegram(incident) {
   if (!TG_TOKEN || !TG_CHAT_ID) return;
 
@@ -272,6 +337,7 @@ function processResponse(data) {
     normalized.forEach(i => seenIds.add(i.id));
     broadcastNewIncidents(fresh);
     fresh.forEach(sendTelegram);
+    fresh.forEach(sendPushover);
   }
 
   const active = normalized.filter(i => !i.closed);
@@ -387,6 +453,22 @@ app.get('/test-telegram', (_req, res) => {
     lng:          -77.9961,
   });
   res.json({ ok: true, message: 'Telegram test sent — check your phone' });
+});
+
+// ── Pushover test ───────────────────────────────────────────────
+app.get('/test-pushover', (_req, res) => {
+  sendPushover({
+    type:         'STRUCTURE FIRE',
+    subtype:      'RESIDENTIAL',
+    address:      '123 Test St, Culpeper, VA',
+    locationName: 'Test House',
+    municipality: 'CULPEPER',
+    crossStreet:  'Main St',
+    priority:     '1',
+    lat:          38.4732,
+    lng:          -77.9961,
+  });
+  res.json({ ok: true, message: 'Pushover test sent — check your phone' });
 });
 
 // ── SSE stream ──────────────────────────────────────────────────

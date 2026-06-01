@@ -541,8 +541,9 @@ export default function App() {
   const [showRaw, setShowRaw]       = useState(false);
   const [rawText, setRawText]       = useState('');
   const [rules, setRules]           = useState(loadRules);
-  const [showAlerts, setShowAlerts] = useState(false);
-  const [showMap, setShowMap]       = useState(false);
+  const [showAlerts,  setShowAlerts]  = useState(false);
+  const [showMap,     setShowMap]     = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
   const rulesRef = useRef(rules);
   const timer    = useRef(null);
 
@@ -607,6 +608,12 @@ export default function App() {
           <span className="header-agency">{data?.agency ?? 'RICHARDSVILLE'}</span>
         </div>
         <div className="header-right">
+          <span
+            className={`header-btn ${showScanner ? 'btn-active' : ''}`}
+            onClick={() => setShowScanner(s => !s)}
+          >
+            scanner
+          </span>
           <span
             className={`header-btn ${showMap ? 'btn-active' : ''}`}
             onClick={() => setShowMap(s => !s)}
@@ -697,6 +704,29 @@ export default function App() {
         <span>IAR · COORDINATOR API · {POLL / 1000}S POLL · SSE LIVE</span>
         <span>{(data?.all ?? []).length} incidents · {active.length} active</span>
       </div>
+
+      {showScanner && (
+        <div className="scanner-bar">
+          <div className="scanner-bar-head">
+            <span className="scanner-label">▶ CULPEPER CO. FIRE/EMS — LIVE SCANNER</span>
+            <a
+              className="scanner-ext"
+              href="https://www.broadcastify.com/listen/feed/26919"
+              target="_blank"
+              rel="noreferrer"
+            >open broadcastify ↗</a>
+            <button className="close-btn" onClick={() => setShowScanner(false)}>✕</button>
+          </div>
+          <iframe
+            title="Culpeper scanner"
+            src="https://www.broadcastify.com/embed/player/?feedId=26919"
+            className="scanner-frame"
+            allow="autoplay"
+            scrolling="no"
+            frameBorder="0"
+          />
+        </div>
+      )}
 
       {showAlerts && (
         <AlertsPanel rules={rules} onChange={setRules} onClose={() => setShowAlerts(false)} />
