@@ -145,7 +145,8 @@ function IncidentMap({ incidents, selected, onSelect }) {
 
       lfRef.current.map = map;
       // Force Leaflet to recalculate container size after render
-      setTimeout(() => map.invalidateSize(), 100);
+      setTimeout(() => map.invalidateSize(), 200);
+      setTimeout(() => map.invalidateSize(), 600);
     }
 
     init();
