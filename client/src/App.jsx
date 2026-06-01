@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 
 const API  = import.meta.env.PROD ? '' : 'http://localhost:3003';
 const POLL = 30_000;
@@ -127,46 +129,32 @@ function IncidentMap({ incidents, selected, onSelect }) {
   const containerRef = useRef(null);
   const lfRef        = useRef({ map: null, markers: {} });
 
-  // Init map — retry until window.L is ready
   useEffect(() => {
-    function init() {
-      const L = window.L;
-      if (!L || !containerRef.current || lfRef.current.map) return;
+    if (!containerRef.current || lfRef.current.map) return;
 
-      const map = L.map(containerRef.current, {
-        center: [38.47, -77.99],
-        zoom:   11,
-      });
+    const map = L.map(containerRef.current, {
+      center: [38.47, -77.99],
+      zoom:   11,
+    });
 
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://openstreetmap.org" target="_blank">OpenStreetMap</a>',
-        maxZoom: 19,
-      }).addTo(map);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://openstreetmap.org" target="_blank">OpenStreetMap</a>',
+      maxZoom: 19,
+    }).addTo(map);
 
-      lfRef.current.map = map;
-      // Force Leaflet to recalculate container size after render
-      setTimeout(() => map.invalidateSize(), 200);
-      setTimeout(() => map.invalidateSize(), 600);
-    }
-
-    init();
-    // If Leaflet CDN wasn't ready yet, retry after a short delay
-    const t = setTimeout(init, 500);
+    lfRef.current.map = map;
+    setTimeout(() => map.invalidateSize(), 200);
 
     return () => {
-      clearTimeout(t);
-      if (lfRef.current.map) {
-        lfRef.current.map.remove();
-        lfRef.current = { map: null, markers: {} };
-      }
+      map.remove();
+      lfRef.current = { map: null, markers: {} };
     };
   }, []);
 
   // Rebuild markers when incidents or selection changes
   useEffect(() => {
-    const L = window.L;
     const { map, markers } = lfRef.current;
-    if (!L || !map) return;
+    if (!map) return;
 
     Object.values(markers).forEach(m => m.remove());
     lfRef.current.markers = {};
