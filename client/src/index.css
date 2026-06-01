@@ -589,4 +589,120 @@ body { background: var(--bg); }
   background: var(--s1); border-top: 1px solid var(--border2);
   font-size: 9px; color: var(--dim); letter-spacing: 0.08em;
   flex-shrink: 0;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* ── Mobile ───────────────────────────────────────────── */
+@media (max-width: 768px) {
+  :root { font-size: 14px; }
+
+  /* Header — stack agency/title and compress right side */
+  .header {
+    height: auto;
+    min-height: 48px;
+    padding: 8px 12px;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding-top: calc(8px + env(safe-area-inset-top));
+  }
+  .header-title { font-size: 13px; }
+  .header-agency { font-size: 11px; }
+  .header-right {
+    gap: 10px;
+    font-size: 11px;
+    flex-wrap: wrap;
+  }
+  /* Hide debug / sync time on mobile to save space */
+  .header-right .hide-mobile { display: none; }
+  .header-btn {
+    font-size: 12px;
+    padding: 4px 8px;
+    border: 1px solid var(--border2);
+    line-height: 1;
+  }
+
+  /* Body: single column */
+  .body { flex-direction: column; }
+
+  /* List: always full width on mobile */
+  .list, .list-narrow {
+    max-width: 100% !important;
+    flex: 1 !important;
+    border-right: none !important;
+    padding: 10px 10px;
+  }
+
+  /* Cards: bigger touch targets */
+  .card {
+    padding: 14px 12px 12px;
+    margin-bottom: 9px;
+  }
+  .card-type { font-size: 15px; }
+  .card-addr { font-size: 14px; }
+  .card-loc  { font-size: 14px; }
+  .card-subtype { font-size: 12px; }
+  .card-munic, .card-cross { font-size: 12px; }
+  .card-recent { font-size: 12px; }
+  .unit-pill { font-size: 11px; padding: 2px 9px; line-height: 20px; }
+  .badge-p, .badge-closed { font-size: 11px; line-height: 20px; }
+  .badge-time { font-size: 12px; }
+
+  /* Detail: full-screen overlay on mobile */
+  .detail {
+    position: fixed;
+    inset: 0;
+    z-index: 300;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .detail-header { padding: 12px 14px; min-height: 52px; }
+  .detail-type { font-size: 16px; }
+  .detail-body { padding: 14px 14px; gap: 18px; }
+  .detail-loc-name { font-size: 16px; }
+  .detail-address  { font-size: 15px; }
+  .detail-meta-row { font-size: 12px; gap: 10px; }
+  .detail-map-frame { height: 220px; }
+  .detail-section-label { font-size: 10px; }
+  .close-btn { font-size: 20px; padding: 4px 10px; }
+
+  /* Timeline: more readable */
+  .tl-entry { font-size: 13px; padding: 6px 6px; gap: 8px; }
+  .tl-time  { font-size: 12px; }
+  .tl-by    { font-size: 10px; }
+
+  /* Unit tags */
+  .unit-tag { font-size: 11px; padding: 2px 7px; line-height: 20px; }
+  .unit-row-label { font-size: 10px; width: 76px; }
+
+  /* Responders */
+  .responder-name { font-size: 13px; }
+  .responder-pos  { font-size: 11px; }
+
+  /* Map overlay: full width */
+  .map-detail-overlay {
+    width: 100%;
+    top: auto;
+    bottom: 0;
+    height: 65%;
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.7);
+  }
+
+  /* Alerts panel: full width */
+  .alerts-panel { width: 100%; }
+  .alert-rule { padding: 12px 10px; }
+  .rule-label { font-size: 13px; }
+  .rule-chk span { font-size: 11px; }
+  .test-btn, .webhook-toggle { font-size: 11px; padding: 2px 10px; line-height: 22px; }
+  .webhook-input { font-size: 13px; padding: 8px 10px; }
+
+  /* Footer: taller and safe-area aware */
+  .footer {
+    height: auto;
+    padding: 6px 14px;
+    padding-bottom: calc(6px + env(safe-area-inset-bottom));
+    font-size: 10px;
+  }
+  .section-label { font-size: 10px; }
+  .section-count { font-size: 10px; }
+  .empty { font-size: 12px; padding: 16px; }
 }

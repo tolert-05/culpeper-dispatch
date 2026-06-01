@@ -619,10 +619,10 @@ export default function App() {
           >
             alerts{rules.some(r => r.enabled) ? ` (${rules.filter(r => r.enabled).length})` : ''}
           </span>
-          <span className="header-btn" onClick={() => setShowRaw(s => !s)}>
+          <span className="header-btn hide-mobile" onClick={() => setShowRaw(s => !s)}>
             {showRaw ? 'hide raw' : 'raw'}
           </span>
-          <span>sync {syncT}</span>
+          <span className="hide-mobile">sync {syncT}</span>
           <Clock />
           <span className={`live-dot ${dotCls}`}>
             {error ? 'OFFLINE' : status === 'ok' ? 'LIVE' : status.replace(/_/g, ' ')}
