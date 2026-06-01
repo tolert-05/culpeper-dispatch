@@ -36,6 +36,7 @@ body { background: var(--bg); }
   display: flex;
   flex-direction: column;
   height: 100vh;
+  height: 100dvh; /* dynamic viewport — fixes iOS Safari bottom bar */
   overflow: hidden;
 }
 
@@ -730,16 +731,23 @@ body { background: var(--bg); }
     line-height: 1;
   }
 
-  /* Body: single column */
-  .body { flex-direction: column; }
+  /* Body: single column, must fill remaining height */
+  .body { flex-direction: column; min-height: 0; }
 
-  /* List: always full width on mobile */
+  /* List: always full width on mobile, scrollable */
   .list, .list-narrow {
     max-width: 100% !important;
     flex: 1 !important;
     border-right: none !important;
     padding: 10px 10px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
+
+  /* Map: needs explicit height on mobile */
+  .map-body { flex: 1; min-height: 0; height: 100%; }
+  .map-outer { height: 100%; }
+  .map-container { height: 100%; min-height: 300px; }
 
   /* Cards: bigger touch targets */
   .card {
