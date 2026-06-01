@@ -127,26 +127,37 @@ function IncidentMap({ incidents, selected, onSelect }) {
   const containerRef = useRef(null);
   const lfRef        = useRef({ map: null, markers: {} });
 
-  // Init map once
+  // Init map — retry until window.L is ready
   useEffect(() => {
-    const L = window.L;
-    if (!L || !containerRef.current || lfRef.current.map) return;
+    function init() {
+      const L = window.L;
+      if (!L || !containerRef.current || lfRef.current.map) return;
 
-    const map = L.map(containerRef.current, {
-      center: [38.47, -77.99], // Culpeper County, VA
-      zoom:   11,
-    });
+      const map = L.map(containerRef.current, {
+        center: [38.47, -77.99],
+        zoom:   11,
+      });
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; <a href="https://openstreetmap.org" target="_blank">OpenStreetMap</a>',
-      maxZoom: 19,
-    }).addTo(map);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://openstreetmap.org" target="_blank">OpenStreetMap</a>',
+        maxZoom: 19,
+      }).addTo(map);
 
-    lfRef.current.map = map;
+      lfRef.current.map = map;
+      // Force Leaflet to recalculate container size after render
+      setTimeout(() => map.invalidateSize(), 100);
+    }
+
+    init();
+    // If Leaflet CDN wasn't ready yet, retry after a short delay
+    const t = setTimeout(init, 500);
 
     return () => {
-      map.remove();
-      lfRef.current = { map: null, markers: {} };
+      clearTimeout(t);
+      if (lfRef.current.map) {
+        lfRef.current.map.remove();
+        lfRef.current = { map: null, markers: {} };
+      }
     };
   }, []);
 
