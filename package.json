@@ -1,0 +1,17 @@
+{
+  "name": "culpeper-dispatch",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently -k -n server,client -c blue,green \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "cd server && node index.js",
+    "dev:client": "cd client && npm run dev",
+    "build": "cd client && npm run build",
+    "start": "node server/index.js",
+    "install:all": "npm install && cd server && npm install && cd ../client && npm install",
+    "setup": "npm run install:all"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
