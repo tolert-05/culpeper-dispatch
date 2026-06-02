@@ -360,18 +360,29 @@ function DetailPanel({ inc, onClose }) {
   const [radioWindow, setRadioWindow] = useState(null);
   const { audio, playingId, play } = useRadioPlayer();
   useEffect(() => {
-    // Find best anchor: arrivedOn → oldest comment → give up
+    // Always reset when incident changes
+    setRadioCalls([]);
+    setRadioWindow(null);
+
+    // Find best anchor: arrivedOn → newest comment → oldest comment
     const comments = inc.comments || [];
-    const oldest = comments.length ? comments[comments.length - 1] : null;
-    const anchorStr = inc.arrivedOn || oldest?.createdAtISO || oldest?.createdAt;
+    const newest = comments[0];
+    const oldest = comments[comments.length - 1];
+    const anchorStr = inc.arrivedOn
+      || oldest?.createdAtISO || oldest?.createdAt
+      || newest?.createdAtISO || newest?.createdAt;
     if (!anchorStr) return;
-    const anchor = new Date(anchorStr).getTime();
+
+    // Parse — handle both ISO and plain date strings
+    let anchor = new Date(anchorStr).getTime();
+    // If no timezone info, assume local
     if (isNaN(anchor)) return;
+
     const since = anchor - 30 * 60 * 1000;
     const until = anchor + 90 * 60 * 1000;
     setRadioWindow({ since, until });
     fetchRadioCalls(since)
-      .then(data => setRadioCalls(data.filter(c => omzTs(c) <= until)))
+      .then(data => setRadioCalls(data.filter(c => omzTs(c) >= since && omzTs(c) <= until)))
       .catch(() => {});
   }, [inc.id]);
 
@@ -626,7 +637,7 @@ async function fetchRadioCalls(sinceMs, tgFilter = '') {
 
 function CallRow({ call, playingId, onPlay }) {
   const ts = omzTs(call);
-  const t = ts ? new Date(ts * 1000) : null;
+  const t = ts ? new Date(ts) : null;
   const timeStr = t ? t.toLocaleTimeString('en-US', { hour12: false }) : '—';
   const isPlaying = playingId === call._id;
   const tgName = omzName(call);
@@ -756,13 +767,20 @@ function RadioTraffic({ inc }) {
   const { audio, playingId, play } = useRadioPlayer();
 
   useEffect(() => {
-    if (!inc.arrivedOn) { setLoading(false); return; }
-    const anchor = new Date(inc.arrivedOn).getTime();
+    setCalls([]);
+    const comments = inc.comments || [];
+    const oldest = comments[comments.length - 1];
+    const newest = comments[0];
+    const anchorStr = inc.arrivedOn
+      || oldest?.createdAtISO || oldest?.createdAt
+      || newest?.createdAtISO || newest?.createdAt;
+    if (!anchorStr) { setLoading(false); return; }
+    const anchor = new Date(anchorStr).getTime();
     if (isNaN(anchor)) { setLoading(false); return; }
     const since = anchor - 30 * 60 * 1000;
     const until = anchor + 90 * 60 * 1000;
     fetchRadioCalls(since)
-      .then(data => setCalls(data.filter(c => omzTs(c) <= until)))
+      .then(data => setCalls(data.filter(c => omzTs(c) >= since && omzTs(c) <= until)))
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [inc.id]);
