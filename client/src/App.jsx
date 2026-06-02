@@ -353,8 +353,33 @@ function IncidentCard({ inc, selected, onClick }) {
 function DetailPanel({ inc, onClose }) {
   const cls = typeClass(inc.type);
   const { onscene = [], enroute = [], available = [] } = inc.units || {};
-  const timeline = [...(inc.comments || [])].reverse();
   const totalUnits = onscene.length + enroute.length + available.length;
+
+  // Fetch radio calls for this incident's time window
+  const [radioCalls, setRadioCalls] = useState([]);
+  const { audio, playingId, play } = useRadioPlayer();
+  useEffect(() => {
+    if (!inc.arrivedOn) return;
+    const anchor = new Date(inc.arrivedOn).getTime();
+    if (isNaN(anchor)) return;
+    fetchRadioCalls(anchor - 30 * 60 * 1000)
+      .then(data => setRadioCalls(data.filter(c => omzTs(c) <= anchor + 90 * 60 * 1000)))
+      .catch(() => {});
+  }, [inc.id]);
+
+  // Merge dispatch comments + radio calls into one sorted timeline
+  const dispatchEntries = [...(inc.comments || [])].map(c => ({
+    _kind: 'dispatch',
+    ts: new Date(c.createdAtISO || c.createdAt || 0).getTime(),
+    data: c,
+  }));
+  const radioEntries = radioCalls.map(c => ({
+    _kind: 'radio',
+    ts: omzTs(c),
+    data: c,
+  }));
+  const mergedTimeline = [...dispatchEntries, ...radioEntries]
+    .sort((a, b) => a.ts - b.ts);
 
   return (
     <div className="detail">
@@ -482,32 +507,44 @@ function DetailPanel({ inc, onClose }) {
           </div>
         )}
 
-        {/* Radio traffic */}
+        {/* Unified timeline: dispatch log + radio traffic */}
         <div className="detail-section">
-          <div className="detail-section-label">RADIO TRAFFIC — ±90 MIN</div>
-          <RadioTraffic inc={inc} />
-        </div>
-
-        {/* Dispatch log */}
-        {timeline.length > 0 && (
-          <div className="detail-section">
-            <div className="detail-section-label">DISPATCH LOG — {timeline.length} entries</div>
-            <div className="timeline">
-              {timeline.map((c, i) => {
-                const kind = classifyComment(c.message);
+          <div className="detail-section-label">
+            INCIDENT TIMELINE — {mergedTimeline.length} entries
+            {radioCalls.length > 0 && <span className="tl-radio-count"> · {radioCalls.length} radio</span>}
+          </div>
+          {audio}
+          {mergedTimeline.length === 0 && <div className="empty">NO TIMELINE DATA</div>}
+          <div className="timeline">
+            {mergedTimeline.map((entry, i) => {
+              if (entry._kind === 'radio') {
+                const c = entry.data;
+                const isPlaying = playingId === c._id;
                 return (
-                  <div key={i} className={`tl-entry tl-${kind} ${c.createdBy === 'CAD' ? 'tl-cad' : ''}`}>
-                    <span className="tl-time">{fmtTime(c.createdAt)}</span>
-                    <span className="tl-msg">{c.message}</span>
-                    {c.createdBy && (
-                      <span className="tl-by">{c.createdBy === 'CAD' ? 'CAD' : c.createdBy.split(' - ')[1] || c.createdBy}</span>
-                    )}
+                  <div key={`r-${c._id}`} className={`tl-entry tl-radio ${isPlaying ? 'tl-radio-playing' : ''}`}>
+                    <span className="tl-time">{fmtTime(c.time)}</span>
+                    <button className="tl-radio-btn" onClick={() => play(c)}>
+                      {isPlaying ? '⏹' : '▶'}
+                    </button>
+                    <span className="tl-msg">{omzName(c)}</span>
+                    <span className="tl-by">{fmtDur(omzDur(c))}</span>
                   </div>
                 );
-              })}
-            </div>
+              }
+              const c = entry.data;
+              const kind = classifyComment(c.message);
+              return (
+                <div key={`d-${i}`} className={`tl-entry tl-${kind} ${c.createdBy === 'CAD' ? 'tl-cad' : ''}`}>
+                  <span className="tl-time">{fmtTime(c.createdAt)}</span>
+                  <span className="tl-msg">{c.message}</span>
+                  {c.createdBy && (
+                    <span className="tl-by">{c.createdBy === 'CAD' ? 'CAD' : c.createdBy.split(' - ')[1] || c.createdBy}</span>
+                  )}
+                </div>
+              );
+            })}
           </div>
-        )}
+        </div>
 
       </div>
     </div>
