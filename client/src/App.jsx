@@ -556,18 +556,13 @@ function fmtDur(sec) {
   return `${Math.floor(sec / 60)}m${sec % 60 ? sec % 60 + 's' : ''}`;
 }
 
-// OpenMHz field names vary — handle both conventions
-function omzTs(call)   { return call.start_time ?? call.time ?? 0; }
-function omzDur(call)  { return call.call_length ?? call.len ?? 0; }
-function omzTg(call)   { return call.talkgroup   ?? call.talkgroupNUM; }
-function omzName(call) { return call.talkgroupName || call.talkgroupLabel || call.talkgroupGroup || (omzTg(call) != null ? `TG ${omzTg(call)}` : 'Unknown'); }
-
-function omzAudioUrl(call) {
-  const u = call.url || call.URL;
-  if (!u) return null;
-  if (u.startsWith('http')) return u;
-  return `https://calls.openmhz.com${u.startsWith('/') ? '' : '/'}${u}`;
-}
+// OpenMHz actual field names (confirmed from API):
+// talkgroupNum, time (ISO string), len, url (full URL)
+function omzTs(call)   { const t = call.time; return t ? new Date(t).getTime() : 0; }
+function omzDur(call)  { return call.len ?? 0; }
+function omzTg(call)   { return call.talkgroupNum; }
+function omzName(call) { return call.talkgroupName || call.talkgroupLabel || (call.talkgroupNum != null ? `TG ${call.talkgroupNum}` : 'Unknown'); }
+function omzAudioUrl(call) { return call.url || null; }
 
 async function fetchRadioCalls(sinceMs, tgFilter = '') {
   const sinceUnix = Math.floor(sinceMs / 1000);
@@ -720,7 +715,7 @@ function RadioTraffic({ inc }) {
     const since = anchor - 30 * 60 * 1000;
     const until = anchor + 90 * 60 * 1000;
     fetchRadioCalls(since)
-      .then(data => setCalls(data.filter(c => omzTs(c) * 1000 <= until)))
+      .then(data => setCalls(data.filter(c => omzTs(c) <= until)))
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [inc.id]);
