@@ -556,6 +556,12 @@ function fmtDur(sec) {
   return `${Math.floor(sec / 60)}m${sec % 60 ? sec % 60 + 's' : ''}`;
 }
 
+// OpenMHz field names vary — handle both conventions
+function omzTs(call)   { return call.start_time ?? call.time ?? 0; }
+function omzDur(call)  { return call.call_length ?? call.len ?? 0; }
+function omzTg(call)   { return call.talkgroup   ?? call.talkgroupNUM; }
+function omzName(call) { return call.talkgroupName || call.talkgroupLabel || call.talkgroupGroup || (omzTg(call) != null ? `TG ${omzTg(call)}` : 'Unknown'); }
+
 function omzAudioUrl(call) {
   const u = call.url || call.URL;
   if (!u) return null;
@@ -572,14 +578,16 @@ async function fetchRadioCalls(sinceMs, tgFilter = '') {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`OpenMHz HTTP ${res.status}`);
   const data = await res.json();
-  return (data.calls || []).sort((a, b) => b.time - a.time);
+  const calls = data.calls || [];
+  return calls.sort((a, b) => omzTs(b) - omzTs(a));
 }
 
 function CallRow({ call, playingId, onPlay }) {
-  const t = new Date(call.time * 1000);
-  const timeStr = t.toLocaleTimeString('en-US', { hour12: false });
+  const ts = omzTs(call);
+  const t = ts ? new Date(ts * 1000) : null;
+  const timeStr = t ? t.toLocaleTimeString('en-US', { hour12: false }) : '—';
   const isPlaying = playingId === call._id;
-  const tgName = call.talkgroupName || call.talkgroupLabel || `TG ${call.talkgroupNUM}`;
+  const tgName = omzName(call);
 
   return (
     <div className={`radio-call ${isPlaying ? 'radio-call-active' : ''}`}>
@@ -590,7 +598,7 @@ function CallRow({ call, playingId, onPlay }) {
         <span className="radio-call-tg">{tgName}</span>
         <span className="radio-call-time">{timeStr}</span>
       </div>
-      <span className="radio-call-dur">{fmtDur(call.len)}</span>
+      <span className="radio-call-dur">{fmtDur(omzDur(call))}</span>
     </div>
   );
 }
@@ -708,10 +716,11 @@ function RadioTraffic({ inc }) {
   useEffect(() => {
     if (!inc.arrivedOn) { setLoading(false); return; }
     const anchor = new Date(inc.arrivedOn).getTime();
-    const since  = anchor - 30 * 60 * 1000;
-    const until  = anchor + 90 * 60 * 1000;
+    if (isNaN(anchor)) { setLoading(false); return; }
+    const since = anchor - 30 * 60 * 1000;
+    const until = anchor + 90 * 60 * 1000;
     fetchRadioCalls(since)
-      .then(data => setCalls(data.filter(c => c.time * 1000 <= until)))
+      .then(data => setCalls(data.filter(c => omzTs(c) * 1000 <= until)))
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [inc.id]);
