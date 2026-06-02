@@ -357,13 +357,21 @@ function DetailPanel({ inc, onClose }) {
 
   // Fetch radio calls for this incident's time window
   const [radioCalls, setRadioCalls] = useState([]);
+  const [radioWindow, setRadioWindow] = useState(null);
   const { audio, playingId, play } = useRadioPlayer();
   useEffect(() => {
-    if (!inc.arrivedOn) return;
-    const anchor = new Date(inc.arrivedOn).getTime();
+    // Find best anchor: arrivedOn → oldest comment → give up
+    const comments = inc.comments || [];
+    const oldest = comments.length ? comments[comments.length - 1] : null;
+    const anchorStr = inc.arrivedOn || oldest?.createdAtISO || oldest?.createdAt;
+    if (!anchorStr) return;
+    const anchor = new Date(anchorStr).getTime();
     if (isNaN(anchor)) return;
-    fetchRadioCalls(anchor - 30 * 60 * 1000)
-      .then(data => setRadioCalls(data.filter(c => omzTs(c) <= anchor + 90 * 60 * 1000)))
+    const since = anchor - 30 * 60 * 1000;
+    const until = anchor + 90 * 60 * 1000;
+    setRadioWindow({ since, until });
+    fetchRadioCalls(since)
+      .then(data => setRadioCalls(data.filter(c => omzTs(c) <= until)))
       .catch(() => {});
   }, [inc.id]);
 
@@ -512,6 +520,7 @@ function DetailPanel({ inc, onClose }) {
           <div className="detail-section-label">
             INCIDENT TIMELINE — {mergedTimeline.length} entries
             {radioCalls.length > 0 && <span className="tl-radio-count"> · {radioCalls.length} radio</span>}
+            {radioWindow && <span className="tl-radio-count"> · {new Date(radioWindow.since).toLocaleTimeString('en-US',{hour12:false,hour:'2-digit',minute:'2-digit'})}–{new Date(radioWindow.until).toLocaleTimeString('en-US',{hour12:false,hour:'2-digit',minute:'2-digit'})}</span>}
           </div>
           {audio}
           {mergedTimeline.length === 0 && <div className="empty">NO TIMELINE DATA</div>}
@@ -520,9 +529,10 @@ function DetailPanel({ inc, onClose }) {
               if (entry._kind === 'radio') {
                 const c = entry.data;
                 const isPlaying = playingId === c._id;
+                const radioTime = c.time ? new Date(c.time).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }) : '—';
                 return (
                   <div key={`r-${c._id}`} className={`tl-entry tl-radio ${isPlaying ? 'tl-radio-playing' : ''}`}>
-                    <span className="tl-time">{fmtTime(c.time)}</span>
+                    <span className="tl-time">{radioTime}</span>
                     <button className="tl-radio-btn" onClick={() => play(c)}>
                       {isPlaying ? '⏹' : '▶'}
                     </button>
