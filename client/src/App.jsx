@@ -482,6 +482,12 @@ function DetailPanel({ inc, onClose }) {
           </div>
         )}
 
+        {/* Radio traffic */}
+        <div className="detail-section">
+          <div className="detail-section-label">RADIO TRAFFIC — ±90 MIN</div>
+          <RadioTraffic inc={inc} />
+        </div>
+
         {/* Dispatch log */}
         {timeline.length > 0 && (
           <div className="detail-section">
@@ -529,6 +535,195 @@ function Section({ label, incidents, selected, onSelect }) {
           ))
       }
     </section>
+  );
+}
+
+// ── OpenMHz Radio ─────────────────────────────────────────────────
+
+const OMZ_BASE = 'https://api.openmhz.com/culpeper';
+
+const TIME_RANGES = [
+  { label: '30m',  ms: 30  * 60 * 1000 },
+  { label: '1hr',  ms: 60  * 60 * 1000 },
+  { label: '4hr',  ms: 4   * 60 * 60 * 1000 },
+  { label: '12hr', ms: 12  * 60 * 60 * 1000 },
+  { label: '24hr', ms: 24  * 60 * 60 * 1000 },
+];
+
+function fmtDur(sec) {
+  if (!sec) return '';
+  if (sec < 60) return `${sec}s`;
+  return `${Math.floor(sec / 60)}m${sec % 60 ? sec % 60 + 's' : ''}`;
+}
+
+function omzAudioUrl(call) {
+  const u = call.url || call.URL;
+  if (!u) return null;
+  if (u.startsWith('http')) return u;
+  return `https://calls.openmhz.com${u.startsWith('/') ? '' : '/'}${u}`;
+}
+
+async function fetchRadioCalls(sinceMs, tgFilter = '') {
+  const sinceUnix = Math.floor(sinceMs / 1000);
+  let url = `${OMZ_BASE}/calls/newer?time=${sinceUnix}`;
+  if (tgFilter.trim()) {
+    url += `&filter-type=talkgroup&filter-code=${encodeURIComponent(tgFilter.trim())}`;
+  }
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`OpenMHz HTTP ${res.status}`);
+  const data = await res.json();
+  return (data.calls || []).sort((a, b) => b.time - a.time);
+}
+
+function CallRow({ call, playingId, onPlay }) {
+  const t = new Date(call.time * 1000);
+  const timeStr = t.toLocaleTimeString('en-US', { hour12: false });
+  const isPlaying = playingId === call._id;
+  const tgName = call.talkgroupName || call.talkgroupLabel || `TG ${call.talkgroupNUM}`;
+
+  return (
+    <div className={`radio-call ${isPlaying ? 'radio-call-active' : ''}`}>
+      <button className="radio-play-btn" onClick={() => onPlay(call)}>
+        {isPlaying ? '⏹' : '▶'}
+      </button>
+      <div className="radio-call-info">
+        <span className="radio-call-tg">{tgName}</span>
+        <span className="radio-call-time">{timeStr}</span>
+      </div>
+      <span className="radio-call-dur">{fmtDur(call.len)}</span>
+    </div>
+  );
+}
+
+function useRadioPlayer() {
+  const audioRef    = useRef(null);
+  const [playingId,  setPlayingId]  = useState(null);
+  const [playingUrl, setPlayingUrl] = useState(null);
+
+  function play(call) {
+    const url = omzAudioUrl(call);
+    if (!url) return;
+    if (playingId === call._id) {
+      audioRef.current?.pause();
+      setPlayingId(null); setPlayingUrl(null);
+    } else {
+      setPlayingId(call._id); setPlayingUrl(url);
+    }
+  }
+
+  useEffect(() => {
+    if (playingUrl && audioRef.current) {
+      audioRef.current.load();
+      audioRef.current.play().catch(() => {});
+    }
+  }, [playingUrl]);
+
+  const audio = <audio ref={audioRef} src={playingUrl || ''} onEnded={() => setPlayingId(null)} />;
+  return { audio, playingId, play };
+}
+
+function RadioPanel({ onClose }) {
+  const [calls,    setCalls]    = useState([]);
+  const [loading,  setLoading]  = useState(true);
+  const [error,    setError]    = useState(null);
+  const [range,    setRange]    = useState(TIME_RANGES[1]);
+  const [tgFilter, setTgFilter] = useState('');
+  const { audio, playingId, play } = useRadioPlayer();
+
+  async function load(r, tg) {
+    setLoading(true); setError(null);
+    try {
+      const data = await fetchRadioCalls(Date.now() - r.ms, tg);
+      setCalls(data);
+    } catch(e) { setError(e.message); }
+    finally { setLoading(false); }
+  }
+
+  useEffect(() => { load(range, tgFilter); }, []);
+
+  useEffect(() => {
+    const t = setInterval(() => load(range, tgFilter), 60_000);
+    return () => clearInterval(t);
+  }, [range, tgFilter]);
+
+  function applyRange(r) { setRange(r); load(r, tgFilter); }
+  function applyFilter()  { load(range, tgFilter); }
+
+  return (
+    <div className="alerts-overlay" onClick={onClose}>
+      <div className="radio-panel" onClick={e => e.stopPropagation()}>
+        {audio}
+        <div className="alerts-head">
+          <span className="alerts-title">Radio Traffic — OpenMHz · Culpeper</span>
+          <button className="close-btn" onClick={onClose}>✕</button>
+        </div>
+
+        <div className="radio-filters">
+          <div className="radio-range-btns">
+            {TIME_RANGES.map(r => (
+              <button
+                key={r.label}
+                className={`radio-range-btn ${range.label === r.label ? 'range-active' : ''}`}
+                onClick={() => applyRange(r)}
+              >{r.label}</button>
+            ))}
+          </div>
+          <div className="radio-tg-row">
+            <input
+              className="radio-tg-input"
+              type="text"
+              placeholder="Talkgroup IDs, comma-separated (e.g. 45820,46160)"
+              value={tgFilter}
+              onChange={e => setTgFilter(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && applyFilter()}
+            />
+            <button className="radio-tg-go" onClick={applyFilter}>go</button>
+          </div>
+        </div>
+
+        <div className="radio-calls">
+          {loading && <div className="radio-status">Loading…</div>}
+          {error   && <div className="radio-status radio-error">{error}</div>}
+          {!loading && !error && calls.length === 0 && (
+            <div className="radio-status">No calls in this time range</div>
+          )}
+          {calls.map(c => (
+            <CallRow key={c._id} call={c} playingId={playingId} onPlay={play} />
+          ))}
+        </div>
+
+        <div className="alerts-note">
+          {calls.length} calls · refreshes every 60s · <a className="detail-meta-link" href="https://openmhz.com/system/culpeper" target="_blank" rel="noreferrer">openmhz ↗</a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RadioTraffic({ inc }) {
+  const [calls,   setCalls]   = useState([]);
+  const [loading, setLoading] = useState(true);
+  const { audio, playingId, play } = useRadioPlayer();
+
+  useEffect(() => {
+    if (!inc.arrivedOn) { setLoading(false); return; }
+    const anchor = new Date(inc.arrivedOn).getTime();
+    const since  = anchor - 30 * 60 * 1000;
+    const until  = anchor + 90 * 60 * 1000;
+    fetchRadioCalls(since)
+      .then(data => setCalls(data.filter(c => c.time * 1000 <= until)))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [inc.id]);
+
+  if (loading) return <div className="radio-status">Loading…</div>;
+  if (!calls.length) return <div className="empty">NO RADIO TRAFFIC FOUND</div>;
+
+  return (
+    <div className="radio-incident-calls">
+      {audio}
+      {calls.map(c => <CallRow key={c._id} call={c} playingId={playingId} onPlay={play} />)}
+    </div>
   );
 }
 
@@ -596,6 +791,7 @@ export default function App() {
   const [showAlerts,  setShowAlerts]  = useState(false);
   const [showMap,     setShowMap]     = useState(false);
   const [showScanner, setShowScanner] = useState(false);
+  const [showRadio,   setShowRadio]   = useState(false);
   const rulesRef = useRef(rules);
   const timer    = useRef(null);
 
@@ -660,6 +856,12 @@ export default function App() {
           <span className="header-agency">{data?.agency ?? 'RICHARDSVILLE'}</span>
         </div>
         <div className="header-right">
+          <span
+            className={`header-btn ${showRadio ? 'btn-active' : ''}`}
+            onClick={() => setShowRadio(s => !s)}
+          >
+            radio
+          </span>
           <span
             className={`header-btn ${showScanner ? 'btn-active' : ''}`}
             onClick={() => setShowScanner(s => !s)}
@@ -760,6 +962,8 @@ export default function App() {
       {showScanner && (
         <ScannerBar onClose={() => setShowScanner(false)} />
       )}
+
+      {showRadio && <RadioPanel onClose={() => setShowRadio(false)} />}
 
       {showAlerts && (
         <AlertsPanel rules={rules} onChange={setRules} onClose={() => setShowAlerts(false)} />

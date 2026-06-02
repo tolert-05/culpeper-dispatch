@@ -595,6 +595,99 @@ body { background: var(--bg); }
   padding-bottom: env(safe-area-inset-bottom);
 }
 
+/* ── Radio panel ──────────────────────────────────────── */
+.radio-panel {
+  width: 480px;
+  height: 100vh;
+  background: var(--s1);
+  border-left: 1px solid var(--border2);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+
+.radio-filters {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border2);
+  display: flex; flex-direction: column; gap: 8px;
+  flex-shrink: 0;
+}
+
+.radio-range-btns {
+  display: flex; gap: 4px;
+}
+
+.radio-range-btn {
+  background: var(--s2); border: 1px solid var(--border2);
+  color: var(--dim); font-family: inherit; font-size: 10px;
+  padding: 3px 10px; cursor: pointer; letter-spacing: 0.06em;
+}
+.radio-range-btn:hover { color: var(--head); }
+.radio-range-btn.range-active {
+  background: #0e1f3a; border-color: #2756a8; color: #7db9ff;
+}
+
+.radio-tg-row { display: flex; gap: 6px; }
+
+.radio-tg-input {
+  flex: 1;
+  background: var(--s3); border: 1px solid var(--border2);
+  color: var(--text); font-family: inherit; font-size: 10px;
+  padding: 5px 8px; outline: none;
+}
+.radio-tg-input:focus { border-color: var(--blue); }
+.radio-tg-input::placeholder { color: var(--dim); }
+
+.radio-tg-go {
+  background: var(--s2); border: 1px solid var(--border2);
+  color: var(--dim); font-family: inherit; font-size: 10px;
+  padding: 0 10px; cursor: pointer;
+}
+.radio-tg-go:hover { color: var(--head); }
+
+.radio-calls {
+  flex: 1; overflow-y: auto;
+  display: flex; flex-direction: column;
+}
+
+.radio-status {
+  padding: 20px; text-align: center;
+  font-size: 10px; color: var(--dim); letter-spacing: 0.08em;
+}
+.radio-error { color: var(--red); }
+
+.radio-call {
+  display: flex; align-items: center; gap: 10px;
+  padding: 7px 14px;
+  border-bottom: 1px solid var(--border);
+  cursor: default;
+}
+.radio-call:hover { background: var(--s2); }
+.radio-call-active { background: #0e1f3a !important; }
+
+.radio-play-btn {
+  background: none; border: 1px solid var(--border2);
+  color: var(--dim); font-family: inherit; font-size: 11px;
+  width: 26px; height: 26px; cursor: pointer; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.radio-play-btn:hover { color: var(--head); border-color: var(--text); }
+.radio-call-active .radio-play-btn { border-color: #2756a8; color: #7db9ff; }
+
+.radio-call-info {
+  flex: 1; display: flex; flex-direction: column; gap: 2px;
+  min-width: 0;
+}
+.radio-call-tg {
+  font-size: 11px; font-weight: 600; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.radio-call-time { font-size: 10px; color: var(--dim); }
+.radio-call-dur  { font-size: 10px; color: var(--dim); flex-shrink: 0; }
+
+.radio-incident-calls {
+  display: flex; flex-direction: column; gap: 1px;
+}
+
 /* ── Scanner bar ──────────────────────────────────────── */
 .scanner-bar {
   position: fixed;
@@ -806,8 +899,8 @@ body { background: var(--bg); }
     box-shadow: 0 -4px 20px rgba(0,0,0,0.7);
   }
 
-  /* Alerts panel: full width */
-  .alerts-panel { width: 100%; }
+  /* Alerts + Radio panel: full width */
+  .alerts-panel, .radio-panel { width: 100%; }
   .alert-rule { padding: 12px 10px; }
   .rule-label { font-size: 13px; }
   .rule-chk span { font-size: 11px; }
