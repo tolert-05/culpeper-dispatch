@@ -364,19 +364,20 @@ function DetailPanel({ inc, onClose }) {
     setRadioCalls([]);
     setRadioWindow(null);
 
-    // Find best anchor: arrivedOn → newest comment → oldest comment
+    // Find best anchor: arrivedOn → oldest comment → newest comment
+    // Use createdAt (NOT createdAtISO) — createdAtISO is converted on the server in UTC,
+    // which is wrong when IAR sends local Eastern times. The browser parses createdAt correctly.
     const comments = inc.comments || [];
     const newest = comments[0];
     const oldest = comments[comments.length - 1];
     const anchorStr = inc.arrivedOn
-      || oldest?.createdAtISO || oldest?.createdAt
-      || newest?.createdAtISO || newest?.createdAt;
+      || oldest?.createdAt
+      || newest?.createdAt;
     if (!anchorStr) return;
 
-    // Parse — handle both ISO and plain date strings
     let anchor = new Date(anchorStr).getTime();
-    // If no timezone info, assume local
-    if (isNaN(anchor)) return;
+    // Reject NaN or suspiciously old dates (e.g. .NET DateTime.MinValue "0001-01-01")
+    if (isNaN(anchor) || anchor < new Date('2020-01-01').getTime()) return;
 
     const since = anchor - 30 * 60 * 1000;
     const until = anchor + 90 * 60 * 1000;
@@ -772,11 +773,11 @@ function RadioTraffic({ inc }) {
     const oldest = comments[comments.length - 1];
     const newest = comments[0];
     const anchorStr = inc.arrivedOn
-      || oldest?.createdAtISO || oldest?.createdAt
-      || newest?.createdAtISO || newest?.createdAt;
+      || oldest?.createdAt
+      || newest?.createdAt;
     if (!anchorStr) { setLoading(false); return; }
     const anchor = new Date(anchorStr).getTime();
-    if (isNaN(anchor)) { setLoading(false); return; }
+    if (isNaN(anchor) || anchor < new Date('2020-01-01').getTime()) { setLoading(false); return; }
     const since = anchor - 30 * 60 * 1000;
     const until = anchor + 90 * 60 * 1000;
     fetchRadioCalls(since)
