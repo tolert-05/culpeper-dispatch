@@ -356,35 +356,43 @@ function DetailPanel({ inc, onClose }) {
   const totalUnits = onscene.length + enroute.length + available.length;
 
   // Fetch radio calls for this incident's time window
-  const [radioCalls, setRadioCalls] = useState([]);
-  const [radioWindow, setRadioWindow] = useState(null);
+  const [radioCalls,   setRadioCalls]   = useState([]);
+  const [radioWindow,  setRadioWindow]  = useState(null);
+  const [radioLoading, setRadioLoading] = useState(false);
+  const [radioOld,     setRadioOld]     = useState(false);
   const { audio, playingId, play } = useRadioPlayer();
+
   useEffect(() => {
-    // Always reset when incident changes
     setRadioCalls([]);
     setRadioWindow(null);
+    setRadioLoading(false);
+    setRadioOld(false);
 
-    // Find best anchor: arrivedOn → oldest comment → newest comment
-    // Use createdAt (NOT createdAtISO) — createdAtISO is converted on the server in UTC,
-    // which is wrong when IAR sends local Eastern times. The browser parses createdAt correctly.
     const comments = inc.comments || [];
     const newest = comments[0];
     const oldest = comments[comments.length - 1];
-    const anchorStr = inc.arrivedOn
-      || oldest?.createdAt
-      || newest?.createdAt;
+    const anchorStr = inc.arrivedOn || oldest?.createdAt || newest?.createdAt;
     if (!anchorStr) return;
 
     let anchor = new Date(anchorStr).getTime();
-    // Reject NaN or suspiciously old dates (e.g. .NET DateTime.MinValue "0001-01-01")
     if (isNaN(anchor) || anchor < new Date('2020-01-01').getTime()) return;
+
+    // OpenMHz "newer" endpoint only returns recent N calls; incidents older than
+    // ~12h won't have matching archive data returned.
+    const AGE_LIMIT_MS = 12 * 60 * 60 * 1000;
+    if (Date.now() - anchor > AGE_LIMIT_MS) {
+      setRadioOld(true);
+      return;
+    }
 
     const since = anchor - 30 * 60 * 1000;
     const until = anchor + 90 * 60 * 1000;
     setRadioWindow({ since, until });
+    setRadioLoading(true);
     fetchRadioCalls(since)
       .then(data => setRadioCalls(data.filter(c => omzTs(c) >= since && omzTs(c) <= until)))
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setRadioLoading(false));
   }, [inc.id]);
 
   // Merge dispatch comments + radio calls into one sorted timeline
@@ -532,7 +540,10 @@ function DetailPanel({ inc, onClose }) {
           <div className="detail-section-label">
             INCIDENT TIMELINE — {mergedTimeline.length} entries
             {radioCalls.length > 0 && <span className="tl-radio-count"> · {radioCalls.length} radio</span>}
-            {radioWindow && <span className="tl-radio-count"> · {new Date(radioWindow.since).toLocaleTimeString('en-US',{hour12:false,hour:'2-digit',minute:'2-digit'})}–{new Date(radioWindow.until).toLocaleTimeString('en-US',{hour12:false,hour:'2-digit',minute:'2-digit'})}</span>}
+            {radioLoading && <span className="tl-radio-count"> · fetching radio…</span>}
+            {radioWindow && !radioLoading && radioCalls.length === 0 && !radioOld &&
+              <span className="tl-radio-count"> · no radio traffic found</span>}
+            {radioOld && <span className="tl-radio-count"> · radio archive &gt;12h not available</span>}
           </div>
           {audio}
           {mergedTimeline.length === 0 && <div className="empty">NO TIMELINE DATA</div>}
