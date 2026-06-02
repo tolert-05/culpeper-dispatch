@@ -377,20 +377,21 @@ function DetailPanel({ inc, onClose }) {
     let anchor = new Date(anchorStr).getTime();
     if (isNaN(anchor) || anchor < new Date('2020-01-01').getTime()) return;
 
-    // OpenMHz "newer" endpoint only returns recent N calls; incidents older than
-    // ~12h won't have matching archive data returned.
-    const AGE_LIMIT_MS = 12 * 60 * 60 * 1000;
-    if (Date.now() - anchor > AGE_LIMIT_MS) {
-      setRadioOld(true);
-      return;
-    }
-
     const since = anchor - 30 * 60 * 1000;
     const until = anchor + 90 * 60 * 1000;
     setRadioWindow({ since, until });
     setRadioLoading(true);
+
     fetchRadioCalls(since)
-      .then(data => setRadioCalls(data.filter(c => omzTs(c) >= since && omzTs(c) <= until)))
+      .then(data => {
+        const inWindow = data.filter(c => omzTs(c) >= since && omzTs(c) <= until);
+        setRadioCalls(inWindow);
+        // If API returned calls but ALL are newer than our window, it only gave us
+        // its most-recent page and the historical calls we need weren't in it.
+        if (inWindow.length === 0 && data.length > 0 && data.every(c => omzTs(c) > until)) {
+          setRadioOld(true);
+        }
+      })
       .catch(() => {})
       .finally(() => setRadioLoading(false));
   }, [inc.id]);
@@ -543,7 +544,7 @@ function DetailPanel({ inc, onClose }) {
             {radioLoading && <span className="tl-radio-count"> · fetching radio…</span>}
             {radioWindow && !radioLoading && radioCalls.length === 0 && !radioOld &&
               <span className="tl-radio-count"> · no radio traffic found</span>}
-            {radioOld && <span className="tl-radio-count"> · radio archive &gt;12h not available</span>}
+            {radioOld && <span className="tl-radio-count"> · <a className="detail-meta-link" href="https://openmhz.com/system/culpeper" target="_blank" rel="noreferrer">browse archive ↗</a></span>}
           </div>
           {audio}
           {mergedTimeline.length === 0 && <div className="empty">NO TIMELINE DATA</div>}
